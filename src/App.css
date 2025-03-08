@@ -1,0 +1,162 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.app-container {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr 90px;
+  grid-template-areas:
+    "sidebar main-content"
+    "player player";
+  height: 100vh;
+  width: 100vw;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  background-color: #000000;
+  color: #b3b3b3;
+  padding: 24px 0;
+  overflow-y: auto;
+}
+
+.main-content {
+  grid-area: main-content;
+  display: flex;
+  flex-direction: column;
+  background-color: #121212;
+  overflow: hidden;
+}
+
+.top-bar {
+  height: 64px;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(0, 0, 0, 0.5);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.content-area {
+  flex: 1;
+  padding: 0 32px 24px;
+  overflow-y: auto;
+}
+
+.player {
+  grid-area: player;
+  background-color: #181818;
+  border-top: 1px solid #282828;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* Navigation */
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 8px 24px;
+  color: #b3b3b3;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: #ffffff;
+}
+
+.nav-link svg {
+  margin-right: 16px;
+}
+
+/* Cards */
+.card {
+  background-color: #181818;
+  border-radius: 8px;
+  padding: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.card:hover {
+  background-color: #282828;
+}
+
+.card-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-subtitle {
+  color: #b3b3b3;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Player controls */
+.player-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.player-buttons {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.player-progress {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-song-info {
+  display: flex;
+  align-items: center;
+  min-width: 180px;
+}
+
+.player-song-image {
+  width: 56px;
+  height: 56px;
+  margin-right: 12px;
+}
+
+.player-volume {
+  display: flex;
+  align-items: center;
+  min-width: 180px;
+  justify-content: flex-end;
+}
