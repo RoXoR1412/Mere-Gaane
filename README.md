@@ -34,7 +34,11 @@
 
 3. Add your YouTube API key:
    - Get a YouTube Data API key from the [Google Developer Console](https://console.developers.google.com/)
-   - Open `src/api/youtubeApi.ts` and replace `'YOUR_YOUTUBE_API_KEY'` with your actual API key
+   - Create a `.env` file in the root directory (you can copy from `.env.example`)
+   - Add your API key to the `.env` file:
+     ```
+     REACT_APP_YOUTUBE_API_KEY=your_youtube_api_key_here
+     ```
 
 4. Start the development server:
    ```
@@ -64,6 +68,7 @@
 - This application is for educational purposes only
 - The YouTube API has quota limits, so be mindful of your usage
 - This is not a commercial product and should not be used as such
+- **Never commit your `.env` file with your API key to version control**
 
 ## Future Enhancements
 

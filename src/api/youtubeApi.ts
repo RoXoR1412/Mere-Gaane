@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Replace with your actual YouTube API key
-const API_KEY = 'AIzaSyCFdBfdgKxlJpFE5PAqdu_65sJTpSw7mzs';
+// Get API key from environment variables
+const API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 // Create an axios instance with default config for better performance
