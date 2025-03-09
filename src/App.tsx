@@ -14,6 +14,7 @@ const Home = lazy(() => import('./pages/Home'));
 const Search = lazy(() => import('./pages/Search'));
 const Library = lazy(() => import('./pages/Library'));
 const Playlist = lazy(() => import('./pages/Playlist'));
+const LikedSongs = lazy(() => import('./pages/LikedSongs'));
 
 // Loading component for suspense fallback
 const LoadingFallback = () => (
@@ -92,6 +93,7 @@ function App() {
                     <Route path="/search" element={<Search />} />
                     <Route path="/library" element={<Library />} />
                     <Route path="/playlist/:id" element={<Playlist />} />
+                    <Route path="/liked-songs" element={<LikedSongs />} />
                   </Routes>
                 </Suspense>
               </div>

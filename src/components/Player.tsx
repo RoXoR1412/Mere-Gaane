@@ -1,231 +1,209 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
-import { Box, IconButton, Slider, Typography, Grid, Avatar, Paper } from '@mui/material';
-import { PlayArrow, Pause, SkipNext, SkipPrevious, VolumeUp, VolumeOff } from '@mui/icons-material';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePlayer } from '../context/PlayerContext';
+import { formatTime } from '../utils/formatters';
+import { 
+  PlayArrow, 
+  Pause, 
+  SkipNext, 
+  SkipPrevious, 
+  VolumeUp, 
+  VolumeOff, 
+  Shuffle, 
+  Block,
+  Favorite,
+  FavoriteBorder
+} from '@mui/icons-material';
+import './Player.css';
 
-// Helper function to format time (e.g., 125 seconds -> "2:05")
-const formatTime = (seconds: number): string => {
-  if (isNaN(seconds)) return '0:00';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-};
-
-// Memoized song info component to prevent unnecessary re-renders
-const SongInfo = memo(({ title, artist, cover }: { title: string, artist: string, cover: string }) => (
-  <Grid container spacing={2} alignItems="center" sx={{ width: '30%' }}>
-    <Grid item>
-      <Avatar
-        src={cover}
-        alt={title}
-        sx={{ width: 50, height: 50, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
-      />
-    </Grid>
-    <Grid item sx={{ overflow: 'hidden' }}>
-      <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold' }}>
-        {title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" noWrap>
-        {artist}
-      </Typography>
-    </Grid>
-  </Grid>
-));
-
-// Memoized controls component
-const PlayerControls = memo(({ 
-  isPlaying, 
-  togglePlay, 
-  nextSong, 
-  prevSong,
-  hasQueue
-}: { 
-  isPlaying: boolean, 
-  togglePlay: () => void, 
-  nextSong: () => void, 
-  prevSong: () => void,
-  hasQueue: boolean
-}) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <IconButton onClick={prevSong} color="primary">
-      <SkipPrevious />
-    </IconButton>
-    <IconButton onClick={togglePlay} color="primary" sx={{ mx: 1 }}>
-      {isPlaying ? <Pause /> : <PlayArrow />}
-    </IconButton>
-    <IconButton 
-      onClick={nextSong} 
-      color="primary"
-      disabled={!hasQueue}
-      sx={{ opacity: hasQueue ? 1 : 0.5 }}
-    >
-      <SkipNext />
-    </IconButton>
-  </Box>
-));
-
-// Memoized progress component
-const ProgressBar = memo(({ 
-  currentTime, 
-  duration, 
-  seekTo 
-}: { 
-  currentTime: number, 
-  duration: number, 
-  seekTo: (time: number) => void 
-}) => {
-  const [localValue, setLocalValue] = useState<number>(0);
+const Player: React.FC = () => {
+  const { 
+    currentSong, 
+    isPlaying, 
+    togglePlay, 
+    volume, 
+    setVolume, 
+    currentTime, 
+    duration, 
+    seekTo, 
+    nextSong, 
+    prevSong, 
+    queue,
+    isShuffleMode,
+    toggleShuffleMode,
+    preventRepeat,
+    togglePreventRepeat,
+    playHistory,
+    isLiked,
+    toggleLikeSong
+  } = usePlayer();
+  
+  const [seekValue, setSeekValue] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [localVolume, setLocalVolume] = useState(volume);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const volumeBarRef = useRef<HTMLDivElement>(null);
   
-  // Update local value when currentTime changes, but only if not dragging
   useEffect(() => {
-    if (!isDragging) {
-      setLocalValue(currentTime);
+    if (!isDragging && currentTime > 0) {
+      setSeekValue((currentTime / duration) * 100);
     }
-  }, [currentTime, isDragging]);
+  }, [currentTime, duration, isDragging]);
   
-  const handleChange = (_: Event, newValue: number | number[]) => {
-    setLocalValue(newValue as number);
-    setIsDragging(true);
+  useEffect(() => {
+    setLocalVolume(volume);
+  }, [volume]);
+  
+  const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (progressBarRef.current && duration > 0) {
+      const rect = progressBarRef.current.getBoundingClientRect();
+      const percent = (e.clientX - rect.left) / rect.width;
+      const seekTimeValue = percent * duration;
+      seekTo(seekTimeValue);
+    }
   };
   
-  const handleChangeCommitted = (_: React.SyntheticEvent | Event, newValue: number | number[]) => {
-    seekTo(newValue as number);
-    setIsDragging(false);
-  };
-  
-  return (
-    <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', px: 2 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mr: 1, minWidth: '40px' }}>
-        {formatTime(localValue)}
-      </Typography>
-      <Slider
-        value={localValue}
-        min={0}
-        max={duration || 100}
-        onChange={handleChange}
-        onChangeCommitted={handleChangeCommitted}
-        sx={{ mx: 1 }}
-      />
-      <Typography variant="body2" color="text.secondary" sx={{ ml: 1, minWidth: '40px' }}>
-        {formatTime(duration)}
-      </Typography>
-    </Box>
-  );
-});
-
-// Memoized volume control component
-const VolumeControl = memo(({ 
-  volume, 
-  setVolume 
-}: { 
-  volume: number, 
-  setVolume: (volume: number) => void 
-}) => {
-  const [isMuted, setIsMuted] = useState(false);
-  const previousVolume = useRef(volume);
-  
-  const handleVolumeChange = (_: Event, newValue: number | number[]) => {
-    const newVolume = newValue as number;
-    setVolume(newVolume);
-    if (newVolume > 0 && isMuted) {
-      setIsMuted(false);
-    } else if (newVolume === 0 && !isMuted) {
-      setIsMuted(true);
+  const handleVolumeBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (volumeBarRef.current) {
+      const rect = volumeBarRef.current.getBoundingClientRect();
+      const percent = (e.clientX - rect.left) / rect.width;
+      const newVolume = Math.max(0, Math.min(100, Math.round(percent * 100)));
+      setLocalVolume(newVolume);
+      setVolume(newVolume);
     }
   };
   
   const toggleMute = () => {
-    if (isMuted) {
-      setVolume(previousVolume.current || 50);
-      setIsMuted(false);
+    if (localVolume === 0) {
+      const previousVolume = localStorage.getItem('previousVolume');
+      const newVolume = previousVolume ? parseInt(previousVolume, 10) : 70;
+      setLocalVolume(newVolume);
+      setVolume(newVolume);
     } else {
-      previousVolume.current = volume;
+      localStorage.setItem('previousVolume', localVolume.toString());
+      setLocalVolume(0);
       setVolume(0);
-      setIsMuted(true);
     }
   };
   
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', width: '20%' }}>
-      <IconButton onClick={toggleMute} size="small">
-        {isMuted || volume === 0 ? <VolumeOff /> : <VolumeUp />}
-      </IconButton>
-      <Slider
-        value={volume}
-        min={0}
-        max={100}
-        onChange={handleVolumeChange}
-        sx={{ width: 100, ml: 1 }}
-        size="small"
-      />
-    </Box>
-  );
-});
-
-const Player: React.FC = () => {
-  const {
-    currentSong,
-    isPlaying,
-    volume,
-    currentTime,
-    duration,
-    queue,
-    togglePlay,
-    setVolume,
-    seekTo,
-    nextSong,
-    prevSong,
-  } = usePlayer();
-
-  // Don't render anything if there's no current song
   if (!currentSong) return null;
-
+  
+  const capitalizeGenre = (genre?: string) => {
+    if (!genre || genre === 'unknown') return '';
+    return genre.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+  
   return (
-    <Paper
-      elevation={3}
-      sx={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        p: 1,
-        backgroundColor: 'background.paper',
-        zIndex: 1000,
-        borderTop: '1px solid',
-        borderColor: 'divider',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-        <SongInfo
-          title={currentSong.title}
-          artist={currentSong.artist}
-          cover={currentSong.cover}
-        />
-        
-        <PlayerControls
-          isPlaying={isPlaying}
-          togglePlay={togglePlay}
-          nextSong={nextSong}
-          prevSong={prevSong}
-          hasQueue={queue.length > 0}
-        />
-        
-        <VolumeControl
-          volume={volume}
-          setVolume={setVolume}
-        />
-      </Box>
+    <div className="player-container">
+      {/* Left section - Song info */}
+      <div className="player-section left">
+        <div className="song-info">
+          <img 
+            src={currentSong.cover} 
+            alt={currentSong.title}
+            className="song-cover"
+          />
+          <div className="song-details">
+            <div className="song-title">{currentSong.title}</div>
+            <div className="song-artist">{currentSong.artist}</div>
+            {currentSong.genre && currentSong.genre !== 'unknown' && (
+              <div className="song-genre">{capitalizeGenre(currentSong.genre)}</div>
+            )}
+          </div>
+          <div 
+            className={`like-button ${isLiked(currentSong.id) ? 'active' : ''}`}
+            onClick={() => toggleLikeSong(currentSong)}
+          >
+            {isLiked(currentSong.id) ? <Favorite fontSize="small" /> : <FavoriteBorder fontSize="small" />}
+          </div>
+        </div>
+      </div>
       
-      <ProgressBar
-        currentTime={currentTime}
-        duration={duration}
-        seekTo={seekTo}
-      />
-    </Paper>
+      {/* Center section - Controls and progress */}
+      <div className="player-section center">
+        <div className="control-buttons">
+          <div 
+            className={`control-button ${isShuffleMode ? 'active' : ''}`}
+            onClick={toggleShuffleMode}
+            title={isShuffleMode ? "Shuffle is ON" : "Shuffle is OFF"}
+          >
+            <Shuffle fontSize="small" />
+          </div>
+          
+          <div 
+            className="control-button"
+            onClick={prevSong}
+            title="Previous"
+          >
+            <SkipPrevious />
+          </div>
+          
+          <div 
+            className="play-button"
+            onClick={togglePlay}
+            title={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? <Pause /> : <PlayArrow />}
+          </div>
+          
+          <div 
+            className="control-button"
+            onClick={nextSong}
+            title="Next"
+            style={{ opacity: !queue.length && !isShuffleMode ? 0.5 : 1 }}
+          >
+            <SkipNext />
+          </div>
+          
+          <div 
+            className={`control-button ${preventRepeat ? 'active' : ''}`}
+            onClick={togglePreventRepeat}
+            title={preventRepeat ? "Prevent Repeat is ON" : "Prevent Repeat is OFF"}
+          >
+            <Block fontSize="small" />
+          </div>
+        </div>
+        
+        <div className="progress-container">
+          <div className="progress-time">{formatTime(currentTime)}</div>
+          <div 
+            className="progress-bar"
+            ref={progressBarRef}
+            onClick={handleProgressBarClick}
+          >
+            <div 
+              className="progress-fill"
+              style={{ width: `${seekValue}%` }}
+            >
+              <div className="progress-handle"></div>
+            </div>
+          </div>
+          <div className="progress-time right">{formatTime(duration)}</div>
+        </div>
+      </div>
+      
+      {/* Right section - Volume */}
+      <div className="player-section right">
+        <div className="volume-control">
+          <div 
+            className="volume-icon"
+            onClick={toggleMute}
+          >
+            {localVolume === 0 ? <VolumeOff fontSize="small" /> : <VolumeUp fontSize="small" />}
+          </div>
+          <div 
+            className="volume-bar"
+            ref={volumeBarRef}
+            onClick={handleVolumeBarClick}
+          >
+            <div 
+              className="volume-fill"
+              style={{ width: `${localVolume}%` }}
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default memo(Player); 
+export default Player;

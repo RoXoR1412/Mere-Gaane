@@ -1,14 +1,16 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Box, Typography, Divider } from '@mui/material';
+import { Box, Typography, Divider, Badge } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import AddBoxIcon from '@mui/icons-material/AddBox';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import { usePlayer } from '../context/PlayerContext';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { likedSongs } = usePlayer();
 
   return (
     <Box className="sidebar">
@@ -38,8 +40,21 @@ const Sidebar: React.FC = () => {
           <AddBoxIcon />
           <span>Create Playlist</span>
         </Link>
-        <Link to="/liked-songs" className="nav-link">
-          <FavoriteIcon />
+        <Link to="/liked-songs" className={`nav-link ${location.pathname === '/liked-songs' ? 'active' : ''}`}>
+          <Badge 
+            badgeContent={likedSongs.length > 0 ? likedSongs.length : null} 
+            color="error"
+            sx={{ 
+              '& .MuiBadge-badge': {
+                fontSize: '0.6rem',
+                height: '16px',
+                minWidth: '16px',
+                padding: '0 4px'
+              }
+            }}
+          >
+            <FavoriteIcon color={location.pathname === '/liked-songs' ? 'primary' : 'inherit'} />
+          </Badge>
           <span>Liked Songs</span>
         </Link>
       </Box>
