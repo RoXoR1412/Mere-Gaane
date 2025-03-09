@@ -1,8 +1,35 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 
+// Declare YouTube IFrame API types
 declare global {
   interface Window {
-    YT: any;
+    YT: {
+      Player: new (
+        elementId: string,
+        options: {
+          videoId?: string;
+          height?: string | number;
+          width?: string | number;
+          playerVars?: {
+            autoplay?: 0 | 1;
+            controls?: 0 | 1;
+            disablekb?: 0 | 1;
+            enablejsapi?: 0 | 1;
+            iv_load_policy?: 1 | 3;
+            modestbranding?: 0 | 1;
+            rel?: 0 | 1;
+            showinfo?: 0 | 1;
+            origin?: string;
+            playsinline?: 0 | 1;
+          };
+          events?: {
+            onReady?: (event: { target: any }) => void;
+            onStateChange?: (event: { data: number }) => void;
+            onError?: (event: { data: number }) => void;
+          };
+        }
+      ) => void;
+    };
     onYouTubeIframeAPIReady: () => void;
   }
 }
@@ -14,8 +41,66 @@ interface YouTubePlayerProps {
   onError?: (event: any) => void;
 }
 
-// Load YouTube API script only once
-let youtubeApiLoaded = false;
+// Create a singleton to manage YouTube API loading
+class YouTubeAPILoader {
+  private static instance: YouTubeAPILoader;
+  private isLoading: boolean = false;
+  private isLoaded: boolean = false;
+  private callbacks: (() => void)[] = [];
+
+  private constructor() {}
+
+  public static getInstance(): YouTubeAPILoader {
+    if (!YouTubeAPILoader.instance) {
+      YouTubeAPILoader.instance = new YouTubeAPILoader();
+    }
+    return YouTubeAPILoader.instance;
+  }
+
+  public loadAPI(callback: () => void): void {
+    // If already loaded, call the callback immediately
+    if (this.isLoaded && window.YT && window.YT.Player) {
+      callback();
+      return;
+    }
+
+    // Add callback to the queue
+    this.callbacks.push(callback);
+
+    // If already loading, just wait
+    if (this.isLoading) {
+      return;
+    }
+
+    // Start loading
+    this.isLoading = true;
+
+    // Create script element
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.async = true;
+
+    // Set up global callback
+    window.onYouTubeIframeAPIReady = () => {
+      this.isLoaded = true;
+      this.isLoading = false;
+      
+      // Execute all callbacks
+      this.callbacks.forEach(cb => {
+        try {
+          cb();
+        } catch (error) {
+          console.error('Error in YouTube API callback:', error);
+        }
+      });
+      this.callbacks = [];
+    };
+
+    // Add script to page
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+  }
+}
 
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ 
   videoId, 
@@ -23,24 +108,45 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onStateChange, 
   onError 
 }) => {
-  const playerRef = useRef<HTMLDivElement>(null);
-  const youtubePlayerRef = useRef<any>(null);
+  const playerContainerId = `youtube-player-${videoId}`;
+  const playerInstanceRef = useRef<any>(null);
   
-  // Memoize the initialization function for better performance
-  const initializePlayer = useCallback(() => {
-    if (!playerRef.current) return;
-    
-    // If player already exists, just load the new video
-    if (youtubePlayerRef.current) {
-      youtubePlayerRef.current.loadVideoById(videoId);
+  // Clean up function to destroy player
+  const destroyPlayer = () => {
+    if (playerInstanceRef.current) {
+      try {
+        playerInstanceRef.current.destroy();
+      } catch (error) {
+        console.error('Error destroying YouTube player:', error);
+      }
+      playerInstanceRef.current = null;
+    }
+  };
+
+  // Initialize player
+  const initializePlayer = () => {
+    // Check if element exists
+    const playerElement = document.getElementById(playerContainerId);
+    if (!playerElement) {
+      console.error('Player element not found:', playerContainerId);
       return;
     }
 
+    // Check if YT API is available
+    if (!window.YT || !window.YT.Player) {
+      console.error('YouTube API not available');
+      return;
+    }
+
+    // Destroy existing player if any
+    destroyPlayer();
+
     try {
-      youtubePlayerRef.current = new window.YT.Player(playerRef.current, {
+      // Create new player
+      playerInstanceRef.current = new window.YT.Player(playerContainerId, {
+        videoId: videoId,
         height: '0',
         width: '0',
-        videoId: videoId,
         playerVars: {
           autoplay: 1,
           controls: 0,
@@ -54,75 +160,56 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           playsinline: 1,
         },
         events: {
-          onReady: (event: any) => {
-            console.log('YouTube player ready');
-            // Set playback quality to improve performance
-            const player = event.target;
-            player.setPlaybackQuality('small'); // Use lower quality for better performance
-            onReady(player);
+          onReady: (event) => {
+            console.log('YouTube player ready for video:', videoId);
+            try {
+              // Set lower quality for better performance
+              event.target.setPlaybackQuality('small');
+              onReady(event.target);
+            } catch (error) {
+              console.error('Error in onReady callback:', error);
+            }
           },
-          onStateChange: onStateChange,
-          onError: (event: any) => {
+          onStateChange: (event) => {
+            try {
+              if (onStateChange) {
+                onStateChange(event);
+              }
+            } catch (error) {
+              console.error('Error in onStateChange callback:', error);
+            }
+          },
+          onError: (event) => {
             console.error('YouTube player error:', event.data);
-            if (onError) onError(event);
+            try {
+              if (onError) {
+                onError(event);
+              }
+            } catch (error) {
+              console.error('Error in onError callback:', error);
+            }
           },
         },
       });
     } catch (error) {
-      console.error('Error initializing YouTube player:', error);
+      console.error('Error creating YouTube player:', error);
     }
-  }, [videoId, onReady, onStateChange, onError]);
+  };
 
+  // Load YouTube API and initialize player
   useEffect(() => {
-    // Load the YouTube iframe API if it's not already loaded
-    if (!youtubeApiLoaded) {
-      youtubeApiLoaded = true;
-      
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      tag.async = true; // Load asynchronously for better performance
-      
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    const apiLoader = YouTubeAPILoader.getInstance();
+    apiLoader.loadAPI(initializePlayer);
 
-      window.onYouTubeIframeAPIReady = () => {
-        console.log('YouTube API ready');
-        initializePlayer();
-      };
-    } else if (window.YT && window.YT.Player) {
-      // If API is already loaded, initialize player directly
-      initializePlayer();
-    } else {
-      // If API is loading but not ready yet, wait for it
-      window.onYouTubeIframeAPIReady = initializePlayer;
-    }
-
+    // Cleanup on unmount
     return () => {
-      // Clean up the player when component unmounts
-      if (youtubePlayerRef.current) {
-        try {
-          youtubePlayerRef.current.destroy();
-        } catch (error) {
-          console.error('Error destroying YouTube player:', error);
-        }
-      }
+      destroyPlayer();
     };
-  }, [initializePlayer]);
+  }, [videoId]); // Re-initialize when videoId changes
 
-  useEffect(() => {
-    // Update video when videoId changes
-    if (youtubePlayerRef.current && videoId) {
-      try {
-        youtubePlayerRef.current.loadVideoById(videoId);
-      } catch (error) {
-        console.error('Error loading video:', error);
-        // Reinitialize player if loading fails
-        initializePlayer();
-      }
-    }
-  }, [videoId, initializePlayer]);
-
-  return <div ref={playerRef} style={{ display: 'none' }} />;
+  return (
+    <div id={playerContainerId} style={{ display: 'none' }} />
+  );
 };
 
-export default React.memo(YouTubePlayer); // Use memo for better performance 
+export default React.memo(YouTubePlayer); 

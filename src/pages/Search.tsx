@@ -125,28 +125,46 @@ const Search: React.FC<SearchProps> = ({ initialQuery = '', onQueryChange }) => 
   };
 
   const handleCardClick = (item: SearchResult) => {
-    if (item.type === 'track') {
-      // Add to search history
-      const newHistory = [
-        { query: item.title, timestamp: new Date().toISOString() },
-        ...searchHistory.filter(h => h.query !== item.title).slice(0, 4)
-      ];
-      setSearchHistory(newHistory);
-      localStorage.setItem('searchHistory', JSON.stringify(newHistory));
-      
-      // Play the song
-      const songToPlay = {
-        id: item.id,
-        title: item.title,
-        artist: item.artist,
-        cover: item.cover,
-        duration: item.duration || 0
-      };
-      
-      playSong(songToPlay);
-    } else if (item.type === 'playlist') {
-      // Navigate to playlist page
-      navigate(`/playlist/${item.id}`);
+    try {
+      if (item.type === 'track') {
+        console.log('Track clicked:', item);
+        
+        // Add to search history
+        try {
+          const newHistory = [
+            { query: item.title, timestamp: new Date().toISOString() },
+            ...searchHistory.filter(h => h.query !== item.title).slice(0, 4)
+          ];
+          setSearchHistory(newHistory);
+          localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+        } catch (error) {
+          console.error('Error updating search history:', error);
+        }
+        
+        // Play the song
+        try {
+          const songToPlay = {
+            id: item.id,
+            title: item.title,
+            artist: item.artist,
+            cover: item.cover,
+            duration: item.duration || 0
+          };
+          
+          console.log('Playing song:', songToPlay);
+          playSong(songToPlay);
+        } catch (error) {
+          console.error('Error playing song:', error);
+          alert('Failed to play the song. Please try another one.');
+        }
+      } else if (item.type === 'playlist') {
+        // Navigate to playlist page
+        console.log('Navigating to playlist:', item.id);
+        navigate(`/playlist/${item.id}`);
+      }
+    } catch (error) {
+      console.error('Error in handleCardClick:', error);
+      alert('An error occurred. Please try again.');
     }
   };
 

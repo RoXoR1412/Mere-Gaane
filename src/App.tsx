@@ -6,6 +6,8 @@ import { Box, CircularProgress } from '@mui/material';
 import { PlayerProvider } from './context/PlayerContext';
 import TopBar from './components/TopBar';
 import Player from './components/Player';
+import Sidebar from './components/Sidebar';
+import './App.css';
 
 // Lazy load pages to improve initial load time
 const Home = lazy(() => import('./pages/Home'));
@@ -79,27 +81,23 @@ function App() {
       <CssBaseline />
       <PlayerProvider>
         <Router>
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            <TopBar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                overflow: 'auto',
-                pb: '100px', // Add padding to account for the player at the bottom
-              }}
-            >
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/library" element={<Library />} />
-                  <Route path="/playlist/:id" element={<Playlist />} />
-                </Routes>
-              </Suspense>
-            </Box>
+          <div className="app-container">
+            <Sidebar />
+            <div className="main-content">
+              <TopBar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+              <div className="content-area">
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="/library" element={<Library />} />
+                    <Route path="/playlist/:id" element={<Playlist />} />
+                  </Routes>
+                </Suspense>
+              </div>
+            </div>
             <Player />
-          </Box>
+          </div>
         </Router>
       </PlayerProvider>
     </ThemeProvider>

@@ -53,29 +53,44 @@ const Playlist: React.FC = () => {
   }, [id]);
 
   const handlePlaySong = (song: PlaylistItem) => {
-    // Convert to Song type for player
-    const songToPlay = {
-      id: song.id,
-      title: song.title,
-      artist: song.artist,
-      cover: song.cover,
-      duration: song.duration || 0
-    };
-    
-    playSong(songToPlay);
+    try {
+      console.log('Playing song from playlist:', song);
+      
+      // Convert to Song type for player
+      const songToPlay = {
+        id: song.id,
+        title: song.title,
+        artist: song.artist,
+        cover: song.cover,
+        duration: song.duration || 0
+      };
+      
+      playSong(songToPlay);
+    } catch (error) {
+      console.error('Error playing song from playlist:', error);
+      alert('Failed to play the song. Please try another one.');
+    }
   };
 
   const handleAddToQueue = (song: PlaylistItem) => {
-    // Convert to Song type for player
-    const songToAdd = {
-      id: song.id,
-      title: song.title,
-      artist: song.artist,
-      cover: song.cover,
-      duration: song.duration || 0
-    };
-    
-    addToQueue(songToAdd);
+    try {
+      console.log('Adding song to queue:', song);
+      
+      // Convert to Song type for player
+      const songToAdd = {
+        id: song.id,
+        title: song.title,
+        artist: song.artist,
+        cover: song.cover,
+        duration: song.duration || 0
+      };
+      
+      addToQueue(songToAdd);
+      alert(`"${song.title}" added to queue`);
+    } catch (error) {
+      console.error('Error adding song to queue:', error);
+      alert('Failed to add the song to queue. Please try again.');
+    }
   };
 
   if (loading) {
